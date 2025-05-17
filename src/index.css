@@ -1,0 +1,17 @@
+/* .district-tooltip {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #006400;
+  border-radius: 3px;
+  padding: 10px 15px;
+  font-size: 12px;
+} */
+
+.leaflet-tooltip.district-label {
+  background: transparent;
+  border: none;
+  color: #1a202c; /* dark gray */
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none; /* যাতে ক্লিকের সমস্যা না হয় */
+}

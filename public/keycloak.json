@@ -1,0 +1,6 @@
+{
+  "realm": "INSIGHTDB-V2-PROD",
+  "auth-server-url": "https://idpv2.oss.net.bd/",
+  "resource": "insightdb-db-client",
+  "public-client": true
+}

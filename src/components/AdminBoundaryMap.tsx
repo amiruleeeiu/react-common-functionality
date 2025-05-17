@@ -1,0 +1,569 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as turf from "@turf/turf";
+
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  Center,
+  CloseButton,
+  Flex,
+  Heading,
+  HStack,
+  IconButton,
+  Skeleton,
+  Spinner,
+  Stack,
+  Text,
+  useBreakpointValue,
+} from "@chakra-ui/react";
+import type { LatLngBoundsExpression, Layer } from "leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
+import { FaGraduationCap } from "react-icons/fa";
+import { FiMenu } from "react-icons/fi";
+import { IoIosArrowBack } from "react-icons/io";
+import { MdEmail, MdPhone } from "react-icons/md";
+import {
+  GeoJSON,
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
+import { useGetMapDataQuery } from "../../services/apiSlice";
+
+const FitBoundsHandler = ({ geoJsonData }: { geoJsonData: any }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (geoJsonData) {
+      const layer = L.geoJSON(geoJsonData);
+      const bounds: LatLngBoundsExpression = layer.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [20, 20] }); // padding দিলে একটু margin থাকবে
+      }
+    }
+  }, [geoJsonData, map]);
+
+  return null;
+};
+
+interface Properties {
+  division_name?: string;
+  district_name?: string;
+  upazila_name?: string;
+  union_name?: string;
+  mauza_name?: string;
+  value?: string;
+}
+
+const getName = (properties: Properties, mapTitle: string): string => {
+  let name = "Unknown";
+
+  const { value } = properties || {};
+  if (mapTitle === "divisions" && properties?.division_name) {
+    name = properties?.division_name + ` (${value})` || "Unknown";
+  } else if (mapTitle === "districts") {
+    name = properties?.district_name + ` (${value})` || "Unknown";
+  } else if (mapTitle === "upazilas") {
+    name = properties?.upazila_name || "Unknown";
+  } else if (mapTitle === "unions") {
+    name = properties?.union_name || "Unknown";
+  } else if (mapTitle === "mouzas") {
+    name = properties?.mauza_name || "Unknown";
+  } else {
+    name = properties?.mauza_name || "Unknown";
+  }
+  return name;
+};
+
+const AdminBoundaryMap = () => {
+  const [mapState, setMapState] = useState<{
+    map: "divisions" | "districts" | "upazilas" | "unions" | "mouzas";
+    code: number[];
+  }>({
+    map: "divisions",
+    code: [],
+  });
+
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
+  const [isWidth, setIsWidth] = useState<boolean>(!isMobile);
+
+  const [titles, setTitles] = useState<Array<string>>(["Bangladesh"]);
+
+  const { data, isLoading, isFetching, isSuccess } = useGetMapDataQuery(
+    `${mapState.map}/${mapState.code.join("/")}`
+  );
+
+  const geoJsonRef = useRef<any>(null);
+
+  const color = {
+    divisions: "#6666ff",
+    districts: "#009999",
+    upazilas: "#3056C9",
+    unions: "#993366",
+    mouzas: "#ff6666",
+  };
+
+  const normalStyle = {
+    color: "#fff",
+    weight: 1.3,
+    fillColor: color[mapState.map],
+    fillOpacity: 0.7,
+  };
+
+  const highlightFeature = (e: any) => {
+    const layer = e.target;
+    layer.setStyle({
+      fillColor: "#ff9966",
+      weight: 1,
+      color: "#000",
+      fillOpacity: 0.6,
+    });
+    layer.bringToFront();
+  };
+
+  const resetHighlight = (e: any) => {
+    geoJsonRef.current?.resetStyle(e.target);
+  };
+
+  const handleClick = (properties: any) => {
+    const {
+      division_code: divisionCode,
+      district_code: districtCode,
+      upazila_code: upazilaCode,
+      union_code: unionCode,
+    } = properties || {};
+
+    const name = getName(properties, mapState.map);
+
+    if (divisionCode && !districtCode && !upazilaCode) {
+      setMapState({ map: "districts", code: [divisionCode] });
+      setTitles((prev) => [...prev, name]);
+    } else if (districtCode && !upazilaCode) {
+      setMapState({ map: "upazilas", code: [divisionCode, districtCode] });
+      setTitles((prev) => [...prev, name]);
+    } else if (upazilaCode && !unionCode) {
+      setMapState({
+        map: "unions",
+        code: [divisionCode, districtCode, upazilaCode],
+      });
+      setTitles((prev) => [...prev, name]);
+    } else if (unionCode) {
+      setMapState({
+        map: "mouzas",
+        code: [divisionCode, districtCode, upazilaCode, unionCode],
+      });
+      if (titles.length < 5) {
+        setTitles((prev) => [...prev, name]);
+      }
+    }
+  };
+
+  const onEachFeature = (feature: any, layer: Layer) => {
+    layer.on({
+      mouseover: highlightFeature,
+      mouseout: resetHighlight,
+      click: () => {
+        handleClick(feature?.properties);
+      },
+    });
+
+    const name = getName(feature.properties, mapState.map);
+
+    layer.bindTooltip(name, {
+      sticky: true,
+      direction: "top",
+      className: "district-tooltip",
+    });
+  };
+
+  console.log(titles);
+
+  const zoom = {
+    divisions: 7,
+    districts: 8,
+    upazilas: 10,
+    unions: 11,
+    mouzas: 11,
+    villages: 12,
+  };
+
+  const handleBack = () => {
+    if (mapState.map === "divisions") {
+      return;
+    } else if (mapState.map === "districts") {
+      setMapState({ map: "divisions", code: [] });
+    } else if (mapState.map === "upazilas") {
+      setMapState({
+        map: "districts",
+        code: [mapState.code[0]],
+      });
+    } else if (mapState.map === "unions") {
+      setMapState({
+        map: "upazilas",
+        code: [mapState.code[0], mapState.code[1]],
+      });
+    } else if (mapState.map === "mouzas") {
+      setMapState({
+        map: "unions",
+        code: [mapState.code[0], mapState.code[1], mapState.code[2]],
+      });
+    }
+
+    setTitles((prev) => {
+      const newTitles = [...prev];
+
+      newTitles.pop();
+
+      return newTitles;
+    });
+  };
+
+  console.log(data);
+
+  const currentTitle = titles[titles.length - 1];
+
+  const getTitleType = (mapType: string) => {
+    switch (mapType) {
+      case "divisions":
+        return "";
+      case "districts":
+        return "Division";
+      case "upazilas":
+        return "District";
+      case "unions":
+        return "Upazila";
+      case "mouzas":
+        return "Union";
+    }
+    return "";
+  };
+
+  // useEffect(() => {
+  //   setIsWidth(mapState?.map == "upazilas" ? "400px" : "300px");
+  // }, [mapState?.map]);
+
+  console.log(isFetching);
+
+  console.log(isWidth);
+
+  const getPosition = (feature: any) => {
+    const centroid = turf.centroid(feature);
+    console.log(centroid);
+    return [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]]; // [lat, lng]
+  };
+
+  const createLabelIcon = (feature: any) =>
+    L.divIcon({
+      className: "custom-div-icon",
+      html: `
+  <div style="
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    color:rgb(11, 96, 182);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+  ">
+    ${feature?.properties?.value}
+  </div>
+`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    });
+
+  return (
+    <Box>
+      <MapContainer
+        key={`${mapState.code.join("-")}`}
+        center={[23.685, 90.3563]}
+        zoom={zoom[mapState.map]}
+        style={{ height: "100vh", width: "100%", padding: "5px" }}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          // attribution="&copy; OpenStreetMap contributors"
+        />
+        {data?.data && !isLoading && !isFetching && isSuccess && (
+          <>
+            <GeoJSON
+              key={`${mapState.map}-${mapState.code.join("-")}-${
+                data?.data?.features?.length || 0
+              }`}
+              data={data?.data}
+              style={() => normalStyle}
+              onEachFeature={onEachFeature}
+              ref={(ref) => {
+                geoJsonRef.current = ref;
+              }}
+            />
+            <FitBoundsHandler geoJsonData={data?.data} />
+          </>
+        )}
+        {data?.data &&
+          !isLoading &&
+          !isFetching &&
+          isSuccess &&
+          mapState.map != "upazilas" &&
+          data?.data?.map((feature: any, index: number) => {
+            console.log(feature?.properties?.value);
+            console.log(getPosition(feature));
+            return (
+              <Marker
+                position={getPosition(feature) as [number, number]}
+                icon={createLabelIcon(feature)}
+                key={index}
+              >
+                <Popup>
+                  A pretty CSS3 popup. <br /> Easily customizable.
+                </Popup>
+              </Marker>
+            );
+          })}
+      </MapContainer>
+      {isFetching && (
+        <Box
+          position="fixed"
+          top={0}
+          left={0}
+          width="100vw"
+          height="100vh"
+          bg="rgba(0, 0, 0, 0.5)"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          zIndex={9999}
+        >
+          <Spinner
+            size="xl"
+            color="blue.600"
+            css={{ "--spinner-track-color": "colors.gray.200" }}
+            borderWidth="5px"
+          />
+        </Box>
+      )}
+
+      <Box
+        position="fixed"
+        top={0}
+        left={0}
+        width={
+          isWidth ? (mapState?.map == "upazilas" ? "350px" : "300px") : "60px"
+        }
+        transition="width 0.5s ease"
+        height="100vh"
+        bg="gray.100"
+        shadow={"2xl"}
+        zIndex={9999}
+      >
+        {isWidth ? (
+          <Box px={3} py={2} overflow={"auto"} height="100%">
+            <Flex justify={"space-between"} alignItems={"center"} mb={5}>
+              <Heading size={"xl"} ps={2}>
+                {currentTitle}
+                {/* {getTitleType(mapState.map) ? (
+              <Box as={"span"} fontSize={"sm"} ml={1} color={"gray.700"}>
+                ({getTitleType(mapState.map)})
+              </Box>
+            ) : (
+              ""
+            )} */}
+              </Heading>
+
+              <CloseButton
+                variant="ghost"
+                size={"md"}
+                rounded="full"
+                onClick={() => setIsWidth((prevState: boolean) => !prevState)}
+                _hover={{ bg: "blue.100" }}
+              />
+            </Flex>
+            {(mapState?.map == "divisions" || mapState?.map == "districts") && (
+              <HStack
+                justify={"space-between"}
+                mb={2}
+                pb={1}
+                borderBottom="1px solid"
+                borderColor="gray.300"
+              >
+                <Text textStyle="sm">
+                  {mapState?.map == "districts" ? "District" : "Division"} Name
+                </Text>
+                <Text color={"gray.600"} textStyle="sm">
+                  Members
+                </Text>
+              </HStack>
+            )}
+            {(isLoading || isFetching) && (
+              <Stack flex="1">
+                {Array(8)
+                  .fill(0)
+                  .map((i, index) => (
+                    <Skeleton
+                      height={mapState?.map == "upazilas" ? "24" : "12"}
+                      key={index}
+                    />
+                  ))}
+              </Stack>
+            )}
+
+            {!isFetching &&
+              !isLoading &&
+              mapState?.map == "upazilas" &&
+              data?.employesInfo?.map((i: any, index: number) => {
+                return (
+                  <Flex
+                    flexDir={"column"}
+                    gap="2"
+                    key={index}
+                    mb={3}
+                    bg={"white"}
+                  >
+                    <Card.Root variant={"elevated"}>
+                      <Card.Body gap="2" p={3}>
+                        <Card.Description bg={"white"}>
+                          <HStack gap="4">
+                            <Avatar.Root>
+                              <Avatar.Fallback name={i?.name} />
+                              <Avatar.Image src="" />
+                            </Avatar.Root>
+                            <Stack gap="0">
+                              <Heading size={"sm"}>{i?.name}</Heading>
+                              <Text textStyle="sm" display={"flex"} gap="1">
+                                <Box as={"span"} color="blue.500" mt={0.5}>
+                                  <FaGraduationCap size={16} />{" "}
+                                </Box>{" "}
+                                {i?.designation}
+                              </Text>
+                              <Text
+                                color="fg.muted"
+                                textStyle="sm"
+                                display={"flex"}
+                                gap="1"
+                                alignItems="center"
+                              >
+                                <Box as={"span"} color="blue.500">
+                                  <MdEmail size={15} />{" "}
+                                </Box>{" "}
+                                {i?.userEmail}
+                              </Text>
+                              <Text
+                                color="fg.muted"
+                                textStyle="sm"
+                                display={"flex"}
+                                gap="1"
+                                alignItems="center"
+                              >
+                                <Box as={"span"} color="blue.500">
+                                  <MdPhone size={15} />{" "}
+                                </Box>{" "}
+                                {i?.userPhone}
+                              </Text>
+                            </Stack>
+                          </HStack>
+                        </Card.Description>
+                      </Card.Body>
+                    </Card.Root>
+                  </Flex>
+                );
+              })}
+
+            {!isFetching &&
+              !isLoading &&
+              (mapState?.map == "divisions" || mapState?.map == "districts") &&
+              data?.data?.map((i: any, index: number) => {
+                const title =
+                  mapState?.map == "districts"
+                    ? i?.properties?.district_name
+                    : i?.properties?.division_name;
+                return (
+                  <Flex
+                    flexDir={"column"}
+                    gap="2"
+                    mb={2}
+                    bg={"white"}
+                    key={index}
+                  >
+                    <Card.Root variant={"elevated"}>
+                      <Card.Body gap="2" p={3} bg={"white"}>
+                        <Card.Description bg={"white"}>
+                          <HStack
+                            gap="4"
+                            justifyContent={"space-between"}
+                            onClick={() => handleClick(i?.properties)}
+                            cursor={"pointer"}
+                            _hover={{
+                              color: "blue.600",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            <Heading size={"sm"}>{title}</Heading>
+
+                            <Stack gap="0">
+                              <Heading size={"sm"}>
+                                {i?.properties?.value}
+                              </Heading>
+                            </Stack>
+                          </HStack>
+                        </Card.Description>
+                      </Card.Body>
+                    </Card.Root>
+                  </Flex>
+                );
+              })}
+          </Box>
+        ) : (
+          <Center mt={3}>
+            <IconButton
+              variant="ghost"
+              size={"lg"}
+              rounded="full"
+              onClick={() => setIsWidth((prevState: boolean) => !prevState)}
+              _hover={{ bg: "blue.100" }}
+            >
+              <FiMenu />
+            </IconButton>
+          </Center>
+        )}
+      </Box>
+
+      <Box
+        position="fixed"
+        top={5}
+        left={0}
+        width="100vw"
+        display="flex"
+        flexDir={"column"}
+        justifyContent="center"
+        alignItems={"center"}
+        zIndex={999}
+      >
+        {isSuccess && mapState.map !== "divisions" && (
+          <Button
+            onClick={handleBack}
+            disabled={isFetching || isLoading}
+            colorPalette={"blue"}
+          >
+            <Box fontSize="10px">
+              <IoIosArrowBack />
+            </Box>
+            Back
+          </Button>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
+export default AdminBoundaryMap;
