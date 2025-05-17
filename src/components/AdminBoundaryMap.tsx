@@ -18,6 +18,7 @@ import {
   Text,
   useBreakpointValue,
 } from "@chakra-ui/react";
+import { motion } from "framer-motion";
 import type { LatLngBoundsExpression, Layer } from "leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -30,11 +31,14 @@ import {
   GeoJSON,
   MapContainer,
   Marker,
-  Popup,
   TileLayer,
   useMap,
 } from "react-leaflet";
 import { useGetMapDataQuery } from "../../services/apiSlice";
+import { convertToAbbreviation } from "../lib/convertToAbbreviation";
+
+const MotionFlex = motion(Flex);
+const MotionBox = motion(Box);
 
 const FitBoundsHandler = ({ geoJsonData }: { geoJsonData: any }) => {
   const map = useMap();
@@ -110,10 +114,50 @@ const AdminBoundaryMap = () => {
     mouzas: "#ff6666",
   };
 
+  const COLORS = [
+    "#FF5733",
+    "#33FF57",
+    "#3357FF",
+    "#F333FF",
+    "#FF33A8",
+    "#33FFF6",
+    "#A8FF33",
+    "#FFA833",
+    "#8D33FF",
+    "#FF3380",
+  ];
+
+  const getOnlyName = (properties: any) => {
+    switch (mapState.map) {
+      case "divisions":
+        return properties?.division_name;
+      case "districts":
+        return properties?.district_name;
+      case "upazilas":
+        return properties?.upazila_name;
+    }
+    return "";
+  };
+
+  const getColorMap = (features: GeoJSON.Feature[]) => {
+    const nameSet = new Set<string>();
+    features.forEach((f) => nameSet.add(getOnlyName(f.properties)));
+
+    const nameArray = Array.from(nameSet);
+    const colorMap: Record<string, string> = {};
+
+    nameArray.forEach((name, index) => {
+      colorMap[name] = COLORS[index % COLORS.length]; // reuse colors if more items
+    });
+
+    return colorMap;
+  };
+
   const normalStyle = {
     color: "#fff",
     weight: 1.3,
     fillColor: color[mapState.map],
+
     fillOpacity: 0.7,
   };
 
@@ -264,27 +308,54 @@ const AdminBoundaryMap = () => {
       className: "custom-div-icon",
       html: `
   <div style="
-    display: flex;
+    display: inline-flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: white;
-    color:rgb(11, 96, 182);
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    font-size: 12px;
-    font-weight: 500;
-    text-align: center;
+    background-color: transparent;
   ">
-    ${feature?.properties?.value}
+    <div style="
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: white;
+      color: rgb(11, 96, 182);
+      min-width: 30px;
+      height: 30px;
+      padding: 0 6px;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+      white-space: nowrap;
+    ">
+      ${convertToAbbreviation(feature?.properties?.value)}
+    </div>
+    <div style="
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: white;
+      color: rgb(11, 96, 182);
+      font-size: 10px;
+      height: 20px;
+      border-radius: 12px;
+      font-weight: 400;
+      text-align: center;
+      margin-top: 5px;
+      padding: 0 6px;
+      white-space: nowrap;
+      width: auto;
+    ">
+      ${getOnlyName(feature?.properties)}
+    </div>
   </div>
 `,
-      iconSize: [30, 30],
       iconAnchor: [15, 15],
     });
 
   return (
-    <Box>
+    <Box h={"100vh"}>
       <MapContainer
         key={`${mapState.code.join("-")}`}
         center={[23.685, 90.3563]}
@@ -324,11 +395,7 @@ const AdminBoundaryMap = () => {
                 position={getPosition(feature) as [number, number]}
                 icon={createLabelIcon(feature)}
                 key={index}
-              >
-                <Popup>
-                  A pretty CSS3 popup. <br /> Easily customizable.
-                </Popup>
-              </Marker>
+              ></Marker>
             );
           })}
       </MapContainer>
@@ -368,160 +435,215 @@ const AdminBoundaryMap = () => {
         zIndex={9999}
       >
         {isWidth ? (
-          <Box px={3} py={2} overflow={"auto"} height="100%">
-            <Flex justify={"space-between"} alignItems={"center"} mb={5}>
-              <Heading size={"xl"} ps={2}>
-                {currentTitle}
-                {/* {getTitleType(mapState.map) ? (
+          <Box
+            display={"flex"}
+            flexDir={"column"}
+            justifyContent={"space-between"}
+            height="100%"
+          >
+            <Box px={3} shadow={"lg"}>
+              <Flex
+                justify="space-between"
+                alignItems="center"
+                position="sticky"
+                top="0"
+                zIndex={10}
+                bg="gray.100"
+                py={2}
+              >
+                <Heading size={"xl"}>
+                  {currentTitle}
+                  {/* {getTitleType(mapState.map) ? (
               <Box as={"span"} fontSize={"sm"} ml={1} color={"gray.700"}>
                 ({getTitleType(mapState.map)})
               </Box>
             ) : (
               ""
             )} */}
-              </Heading>
+                </Heading>
 
-              <CloseButton
-                variant="ghost"
-                size={"md"}
-                rounded="full"
-                onClick={() => setIsWidth((prevState: boolean) => !prevState)}
-                _hover={{ bg: "blue.100" }}
-              />
-            </Flex>
-            {(mapState?.map == "divisions" || mapState?.map == "districts") && (
-              <HStack
-                justify={"space-between"}
-                mb={2}
-                pb={1}
-                borderBottom="1px solid"
-                borderColor="gray.300"
-              >
-                <Text textStyle="sm">
-                  {mapState?.map == "districts" ? "District" : "Division"} Name
-                </Text>
-                <Text color={"gray.600"} textStyle="sm">
-                  Members
-                </Text>
-              </HStack>
-            )}
-            {(isLoading || isFetching) && (
-              <Stack flex="1">
-                {Array(8)
-                  .fill(0)
-                  .map((i, index) => (
-                    <Skeleton
-                      height={mapState?.map == "upazilas" ? "24" : "12"}
+                <CloseButton
+                  variant="ghost"
+                  size={"md"}
+                  rounded="full"
+                  onClick={() => setIsWidth((prevState: boolean) => !prevState)}
+                  _hover={{ bg: "blue.100" }}
+                />
+              </Flex>
+              {(mapState?.map == "divisions" ||
+                mapState?.map == "districts") && (
+                <HStack
+                  justify={"space-between"}
+                  pb={1}
+                  borderBottom="1px solid"
+                  borderColor="gray.300"
+                >
+                  <Text textStyle="sm">
+                    {mapState?.map == "districts" ? "District" : "Division"}{" "}
+                    Name
+                  </Text>
+                  <Text color={"gray.600"} textStyle="sm">
+                    Members
+                  </Text>
+                </HStack>
+              )}
+              {(isLoading || isFetching) && (
+                <Stack flex="1" mt={2}>
+                  {Array(8)
+                    .fill(0)
+                    .map((i, index) => (
+                      <Skeleton
+                        height={mapState?.map == "upazilas" ? "24" : "12"}
+                        key={index}
+                      />
+                    ))}
+                </Stack>
+              )}
+            </Box>
+
+            <Box>
+              {!isFetching &&
+                !isLoading &&
+                mapState?.map == "upazilas" &&
+                data?.employesInfo?.length == 0 && (
+                  <Text p={3} textAlign={"center"}>
+                    No data found!
+                  </Text>
+                )}
+            </Box>
+
+            <MotionBox px={3} py={2} overflow={"auto"} height="100%" flex={1}>
+              {!isFetching &&
+                !isLoading &&
+                mapState?.map == "upazilas" &&
+                data?.employesInfo?.map((i: any, index: number) => {
+                  return (
+                    <MotionFlex
+                      flexDir={"column"}
+                      gap="2"
                       key={index}
-                    />
-                  ))}
-              </Stack>
-            )}
+                      mb={3}
+                      bg={"white"}
+                      initial={{ opacity: 0, x: -60 }}
+                      whileInView={{ scale: 1, opacity: 1, x: 0 }}
+                      viewport={{ once: true, amount: 0.1 }}
+                      transition={{
+                        delay: index * 0.1,
+                        duration: 0.5,
+                        ease: "easeOut",
+                      }}
+                    >
+                      <Card.Root variant={"elevated"}>
+                        <Card.Body gap="2" p={3}>
+                          <Card.Description bg={"white"}>
+                            <HStack gap="4">
+                              <Avatar.Root>
+                                <Avatar.Fallback name={i?.name} />
+                                <Avatar.Image src="" />
+                              </Avatar.Root>
+                              <Stack gap="0">
+                                <Heading size={"sm"}>{i?.name}</Heading>
+                                <Text textStyle="sm" display={"flex"} gap="1">
+                                  <Box as={"span"} color="blue.500" mt={0.5}>
+                                    <FaGraduationCap size={16} />{" "}
+                                  </Box>{" "}
+                                  {i?.designation}
+                                </Text>
+                                <Text
+                                  color="fg.muted"
+                                  textStyle="sm"
+                                  display={"flex"}
+                                  gap="1"
+                                  alignItems="center"
+                                >
+                                  <Box as={"span"} color="blue.500">
+                                    <MdEmail size={15} />{" "}
+                                  </Box>{" "}
+                                  {i?.userEmail}
+                                </Text>
+                                <Text
+                                  color="fg.muted"
+                                  textStyle="sm"
+                                  display={"flex"}
+                                  gap="1"
+                                  alignItems="center"
+                                >
+                                  <Box as={"span"} color="blue.500">
+                                    <MdPhone size={15} />{" "}
+                                  </Box>{" "}
+                                  {i?.userPhone}
+                                </Text>
+                              </Stack>
+                            </HStack>
+                          </Card.Description>
+                        </Card.Body>
+                      </Card.Root>
+                    </MotionFlex>
+                  );
+                })}
 
-            {!isFetching &&
-              !isLoading &&
-              mapState?.map == "upazilas" &&
-              data?.employesInfo?.map((i: any, index: number) => {
-                return (
-                  <Flex
-                    flexDir={"column"}
-                    gap="2"
-                    key={index}
-                    mb={3}
-                    bg={"white"}
-                  >
-                    <Card.Root variant={"elevated"}>
-                      <Card.Body gap="2" p={3}>
-                        <Card.Description bg={"white"}>
-                          <HStack gap="4">
-                            <Avatar.Root>
-                              <Avatar.Fallback name={i?.name} />
-                              <Avatar.Image src="" />
-                            </Avatar.Root>
-                            <Stack gap="0">
-                              <Heading size={"sm"}>{i?.name}</Heading>
-                              <Text textStyle="sm" display={"flex"} gap="1">
-                                <Box as={"span"} color="blue.500" mt={0.5}>
-                                  <FaGraduationCap size={16} />{" "}
-                                </Box>{" "}
-                                {i?.designation}
-                              </Text>
-                              <Text
-                                color="fg.muted"
-                                textStyle="sm"
-                                display={"flex"}
-                                gap="1"
-                                alignItems="center"
-                              >
-                                <Box as={"span"} color="blue.500">
-                                  <MdEmail size={15} />{" "}
-                                </Box>{" "}
-                                {i?.userEmail}
-                              </Text>
-                              <Text
-                                color="fg.muted"
-                                textStyle="sm"
-                                display={"flex"}
-                                gap="1"
-                                alignItems="center"
-                              >
-                                <Box as={"span"} color="blue.500">
-                                  <MdPhone size={15} />{" "}
-                                </Box>{" "}
-                                {i?.userPhone}
-                              </Text>
-                            </Stack>
-                          </HStack>
-                        </Card.Description>
-                      </Card.Body>
-                    </Card.Root>
-                  </Flex>
-                );
-              })}
+              {!isFetching &&
+                !isLoading &&
+                (mapState?.map == "divisions" ||
+                  mapState?.map == "districts") &&
+                data?.data?.map((i: any, index: number) => {
+                  const title =
+                    mapState?.map == "districts"
+                      ? i?.properties?.district_name
+                      : i?.properties?.division_name;
+                  return (
+                    <MotionFlex
+                      flexDir={"column"}
+                      gap="2"
+                      mb={2}
+                      bg={"white"}
+                      key={index}
+                      initial={{ opacity: 0, x: -60 }}
+                      whileInView={{ scale: 1, opacity: 1, x: 0 }}
+                      viewport={{ once: true, amount: 0.1 }}
+                      transition={{
+                        delay: index * 0.1,
+                        duration: 0.5,
+                        ease: "easeOut",
+                      }}
+                      cursor={"pointer"}
+                      onClick={() => handleClick(i?.properties)}
+                    >
+                      <Card.Root variant={"elevated"}>
+                        <Card.Body
+                          gap="2"
+                          p={3}
+                          bg={"white"}
+                          border="1px solid"
+                          borderColor="blue.50"
+                          _hover={{
+                            bg: "blue.50",
+                            border: "1px solid",
+                            borderColor: "blue.400",
+                          }}
+                          transition="all 0.2s ease-in-out"
+                        >
+                          <Card.Description>
+                            <HStack
+                              gap="4"
+                              justifyContent={"space-between"}
+                              // cursor={"pointer"}
+                            >
+                              <Heading size={"sm"}>{title}</Heading>
 
-            {!isFetching &&
-              !isLoading &&
-              (mapState?.map == "divisions" || mapState?.map == "districts") &&
-              data?.data?.map((i: any, index: number) => {
-                const title =
-                  mapState?.map == "districts"
-                    ? i?.properties?.district_name
-                    : i?.properties?.division_name;
-                return (
-                  <Flex
-                    flexDir={"column"}
-                    gap="2"
-                    mb={2}
-                    bg={"white"}
-                    key={index}
-                  >
-                    <Card.Root variant={"elevated"}>
-                      <Card.Body gap="2" p={3} bg={"white"}>
-                        <Card.Description bg={"white"}>
-                          <HStack
-                            gap="4"
-                            justifyContent={"space-between"}
-                            onClick={() => handleClick(i?.properties)}
-                            cursor={"pointer"}
-                            _hover={{
-                              color: "blue.600",
-                              textDecoration: "underline",
-                            }}
-                          >
-                            <Heading size={"sm"}>{title}</Heading>
-
-                            <Stack gap="0">
-                              <Heading size={"sm"}>
-                                {i?.properties?.value}
-                              </Heading>
-                            </Stack>
-                          </HStack>
-                        </Card.Description>
-                      </Card.Body>
-                    </Card.Root>
-                  </Flex>
-                );
-              })}
+                              <Stack gap="0">
+                                <Heading size={"sm"}>
+                                  {i?.properties?.value}
+                                </Heading>
+                              </Stack>
+                            </HStack>
+                          </Card.Description>
+                        </Card.Body>
+                      </Card.Root>
+                    </MotionFlex>
+                  );
+                })}
+            </MotionBox>
           </Box>
         ) : (
           <Center mt={3}>
@@ -542,11 +664,11 @@ const AdminBoundaryMap = () => {
         position="fixed"
         top={5}
         left={0}
-        width="100vw"
+        right={5}
         display="flex"
         flexDir={"column"}
         justifyContent="center"
-        alignItems={"center"}
+        alignItems={"end"}
         zIndex={999}
       >
         {isSuccess && mapState.map !== "divisions" && (
@@ -554,6 +676,7 @@ const AdminBoundaryMap = () => {
             onClick={handleBack}
             disabled={isFetching || isLoading}
             colorPalette={"blue"}
+            mb={2}
           >
             <Box fontSize="10px">
               <IoIosArrowBack />
@@ -561,6 +684,15 @@ const AdminBoundaryMap = () => {
             Back
           </Button>
         )}
+        {/* <Box>
+          <IconButton size={"sm"} variant="subtle">
+            <GoPlus />
+          </IconButton>
+          &nbsp;
+          <IconButton size={"sm"} variant="subtle">
+            <FiMinus />
+          </IconButton>
+        </Box> */}
       </Box>
     </Box>
   );
