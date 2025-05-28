@@ -1,6 +1,6 @@
 {
-  "realm": "INSIGHTDB-V2-PROD",
-  "auth-server-url": "https://idpv2.oss.net.bd/",
-  "resource": "insightdb-db-client",
+  "realm": "BEPRC",
+  "auth-server-url": "https://uat-beprc.oss.net.bd/idp/",
+  "resource": "beprc-public",
   "public-client": true
 }

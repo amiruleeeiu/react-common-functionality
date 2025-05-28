@@ -7,7 +7,6 @@ import {
   Button,
   Card,
   Center,
-  CloseButton,
   Flex,
   Heading,
   HStack,
@@ -26,7 +25,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaGraduationCap } from "react-icons/fa";
 import { FiMenu } from "react-icons/fi";
 import { IoIosArrowBack } from "react-icons/io";
-import { MdEmail, MdPhone } from "react-icons/md";
+import { MdEmail, MdOutlineArrowBackIos, MdPhone } from "react-icons/md";
 import {
   GeoJSON,
   MapContainer,
@@ -104,6 +103,8 @@ const AdminBoundaryMap = () => {
     `${mapState.map}/${mapState.code.join("/")}`
   );
 
+  console.log(data);
+
   const geoJsonRef = useRef<any>(null);
 
   const color = {
@@ -153,13 +154,7 @@ const AdminBoundaryMap = () => {
     return colorMap;
   };
 
-  const normalStyle = {
-    color: "#fff",
-    weight: 1.3,
-    fillColor: color[mapState.map],
-
-    fillOpacity: 0.7,
-  };
+  const featureColorMapRef = useRef(new Map<string, string>());
 
   const highlightFeature = (e: any) => {
     const layer = e.target;
@@ -209,7 +204,20 @@ const AdminBoundaryMap = () => {
     }
   };
 
+  const featureColorMap = new Map<string, string>();
+
   const onEachFeature = (feature: any, layer: Layer) => {
+    // const code = feature.properties?.division_code;
+    // const featureColorMap = featureColorMapRef.current;
+
+    // if (!featureColorMap.has(code)) {
+    //   const index = featureColorMap.size;
+    //   const assignedColor = COLORS[index % COLORS.length];
+    //   featureColorMap.set(code, assignedColor);
+    // }
+
+    // console.log(featureColorMap);
+
     layer.on({
       mouseover: highlightFeature,
       mouseout: resetHighlight,
@@ -227,7 +235,16 @@ const AdminBoundaryMap = () => {
     });
   };
 
-  console.log(titles);
+  const normalStyle = (feature: any) => {
+    const { color2 } = feature || {};
+
+    return {
+      color: "#fff",
+      weight: 1.3,
+      fillColor: color2 || "#ccc",
+      fillOpacity: 0.7,
+    };
+  };
 
   const zoom = {
     divisions: 7,
@@ -269,8 +286,6 @@ const AdminBoundaryMap = () => {
     });
   };
 
-  console.log(data);
-
   const currentTitle = titles[titles.length - 1];
 
   const getTitleType = (mapType: string) => {
@@ -293,13 +308,9 @@ const AdminBoundaryMap = () => {
   //   setIsWidth(mapState?.map == "upazilas" ? "400px" : "300px");
   // }, [mapState?.map]);
 
-  console.log(isFetching);
-
-  console.log(isWidth);
-
   const getPosition = (feature: any) => {
     const centroid = turf.centroid(feature);
-    console.log(centroid);
+
     return [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]]; // [lat, lng]
   };
 
@@ -373,12 +384,13 @@ const AdminBoundaryMap = () => {
                 data?.data?.features?.length || 0
               }`}
               data={data?.data}
-              style={() => normalStyle}
+              style={normalStyle}
               onEachFeature={onEachFeature}
               ref={(ref) => {
                 geoJsonRef.current = ref;
               }}
             />
+
             <FitBoundsHandler geoJsonData={data?.data} />
           </>
         )}
@@ -388,8 +400,6 @@ const AdminBoundaryMap = () => {
           isSuccess &&
           mapState.map != "upazilas" &&
           data?.data?.map((feature: any, index: number) => {
-            console.log(feature?.properties?.value);
-            console.log(getPosition(feature));
             return (
               <Marker
                 position={getPosition(feature) as [number, number]}
@@ -462,13 +472,15 @@ const AdminBoundaryMap = () => {
             )} */}
                 </Heading>
 
-                <CloseButton
+                <IconButton
                   variant="ghost"
                   size={"md"}
                   rounded="full"
                   onClick={() => setIsWidth((prevState: boolean) => !prevState)}
                   _hover={{ bg: "blue.100" }}
-                />
+                >
+                  <MdOutlineArrowBackIos />
+                </IconButton>
               </Flex>
               {(mapState?.map == "divisions" ||
                 mapState?.map == "districts") && (
@@ -535,47 +547,45 @@ const AdminBoundaryMap = () => {
                     >
                       <Card.Root variant={"elevated"}>
                         <Card.Body gap="2" p={3}>
-                          <Card.Description bg={"white"}>
-                            <HStack gap="4">
-                              <Avatar.Root>
-                                <Avatar.Fallback name={i?.name} />
-                                <Avatar.Image src="" />
-                              </Avatar.Root>
-                              <Stack gap="0">
-                                <Heading size={"sm"}>{i?.name}</Heading>
-                                <Text textStyle="sm" display={"flex"} gap="1">
-                                  <Box as={"span"} color="blue.500" mt={0.5}>
-                                    <FaGraduationCap size={16} />{" "}
-                                  </Box>{" "}
-                                  {i?.designation}
-                                </Text>
-                                <Text
-                                  color="fg.muted"
-                                  textStyle="sm"
-                                  display={"flex"}
-                                  gap="1"
-                                  alignItems="center"
-                                >
-                                  <Box as={"span"} color="blue.500">
-                                    <MdEmail size={15} />{" "}
-                                  </Box>{" "}
-                                  {i?.userEmail}
-                                </Text>
-                                <Text
-                                  color="fg.muted"
-                                  textStyle="sm"
-                                  display={"flex"}
-                                  gap="1"
-                                  alignItems="center"
-                                >
-                                  <Box as={"span"} color="blue.500">
-                                    <MdPhone size={15} />{" "}
-                                  </Box>{" "}
-                                  {i?.userPhone}
-                                </Text>
-                              </Stack>
-                            </HStack>
-                          </Card.Description>
+                          <HStack gap="4">
+                            <Avatar.Root>
+                              <Avatar.Fallback name={i?.name} />
+                              <Avatar.Image src="" />
+                            </Avatar.Root>
+                            <Stack gap="0">
+                              <Heading size={"sm"}>{i?.name}</Heading>
+                              <Text textStyle="sm" display={"flex"} gap="1">
+                                <Box as={"span"} color="blue.500" mt={0.5}>
+                                  <FaGraduationCap size={16} />{" "}
+                                </Box>{" "}
+                                {i?.designation}
+                              </Text>
+                              <Text
+                                color="fg.muted"
+                                textStyle="sm"
+                                display={"flex"}
+                                gap="1"
+                                alignItems="center"
+                              >
+                                <Box as={"span"} color="blue.500">
+                                  <MdEmail size={15} />{" "}
+                                </Box>{" "}
+                                {i?.userEmail}
+                              </Text>
+                              <Text
+                                color="fg.muted"
+                                textStyle="sm"
+                                display={"flex"}
+                                gap="1"
+                                alignItems="center"
+                              >
+                                <Box as={"span"} color="blue.500">
+                                  <MdPhone size={15} />{" "}
+                                </Box>{" "}
+                                {i?.userPhone}
+                              </Text>
+                            </Stack>
+                          </HStack>
                         </Card.Body>
                       </Card.Root>
                     </MotionFlex>
@@ -623,21 +633,19 @@ const AdminBoundaryMap = () => {
                           }}
                           transition="all 0.2s ease-in-out"
                         >
-                          <Card.Description>
-                            <HStack
-                              gap="4"
-                              justifyContent={"space-between"}
-                              // cursor={"pointer"}
-                            >
-                              <Heading size={"sm"}>{title}</Heading>
+                          <HStack
+                            gap="4"
+                            justifyContent={"space-between"}
+                            // cursor={"pointer"}
+                          >
+                            <Heading size={"sm"}>{title}</Heading>
 
-                              <Stack gap="0">
-                                <Heading size={"sm"}>
-                                  {i?.properties?.value}
-                                </Heading>
-                              </Stack>
-                            </HStack>
-                          </Card.Description>
+                            <Stack gap="0">
+                              <Heading size={"sm"}>
+                                {i?.properties?.value}
+                              </Heading>
+                            </Stack>
+                          </HStack>
                         </Card.Body>
                       </Card.Root>
                     </MotionFlex>

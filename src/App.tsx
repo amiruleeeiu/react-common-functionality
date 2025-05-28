@@ -1,20 +1,14 @@
-import { Box, Heading } from "@chakra-ui/react";
-import "leaflet/dist/leaflet.css";
-import "./App.css";
-import AdminBoundaryMap from "./components/AdminBoundaryMap";
+// src/App.tsx
+import { Suspense } from "react";
+import { RouterProvider } from "react-router-dom";
+import router from "./router/router";
 
-function App() {
-  // const onRegionClick = () => {};
-
+const App = () => {
   return (
-    <Box>
-      <AdminBoundaryMap />
-      {/* <FileUploadWithProgress />
-      
-      <Video /> */}
-      <Heading>Hellow world</Heading>
-    </Box>
+    <Suspense fallback={<div>Loading...</div>}>
+      <RouterProvider router={router} />
+    </Suspense>
   );
-}
+};
 
 export default App;
