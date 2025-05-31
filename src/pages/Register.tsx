@@ -1,11 +1,11 @@
 import { Center, Heading } from "@chakra-ui/react";
 
-function NotFound() {
+function Register() {
   return (
     <Center h={"100vh"}>
-      <Heading>Not Found</Heading>
+      <Heading>Register Page</Heading>
     </Center>
   );
 }
 
-export default NotFound;
+export default Register;

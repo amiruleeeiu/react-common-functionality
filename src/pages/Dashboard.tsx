@@ -1,3 +1,4 @@
+import { Box, Button, Center } from "@chakra-ui/react";
 import { useAuth } from "../context/AuthProvider";
 
 function Dashboard() {
@@ -5,11 +6,11 @@ function Dashboard() {
 
   console.log(token);
   return (
-    <div>
-      Dashboard
+    <Center h={"full"}>
+      <Box>Dashboard
       <br />
-      <button
-        className="btn btn-primary"
+      <Button
+        colorPalette={"red"}
         onClick={() => {
           if (doLogout) {
             doLogout();
@@ -17,8 +18,8 @@ function Dashboard() {
         }}
       >
         Logout
-      </button>
-    </div>
+      </Button></Box>
+    </Center>
   );
 }
 

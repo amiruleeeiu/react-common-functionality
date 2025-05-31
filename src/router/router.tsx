@@ -1,5 +1,6 @@
 // src/routes/router.tsx
 import { createBrowserRouter } from "react-router-dom";
+import UserRagisterContainer from "../components/UserRagisterContainer";
 import AdminPage from "../pages/AdminPage";
 import Dashboard from "../pages/Dashboard";
 import Login from "../pages/Login";
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
       {
         path: "/login",
         element: <Login />,
+      },
+      {
+        path: "/register",
+        element: <UserRagisterContainer />,
       },
     ],
   },

@@ -1,3 +1,4 @@
+import { Box, Button, Center } from "@chakra-ui/react";
 import { useAuth } from "../context/AuthProvider";
 
 // src/pages/Login.tsx
@@ -5,20 +6,22 @@ const Login = () => {
   const { doLogin } = useAuth();
 
   return (
-    <div>
-      🔐 Login Page
-      <br />
-      <button
-        className="btn btn-primary"
-        onClick={() => {
-          if (doLogin) {
-            doLogin();
-          }
-        }}
-      >
-        Login
-      </button>
-    </div>
+    <Center h={"full"}>
+      <Box>
+        Dashboard
+        <br />
+        <Button
+          colorPalette={"red"}
+          onClick={() => {
+            if (doLogin) {
+              doLogin();
+            }
+          }}
+        >
+          Login
+        </Button>
+      </Box>
+    </Center>
   );
 };
 export default Login;

@@ -28,8 +28,9 @@ const COLORS = [
 export const apiSlice = createApi({
   reducerPath: "api", // optional name for the slice
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:3000/api",
+    baseUrl: "http://localhost:3000",
   }),
+  tagTypes: ["users"],
   endpoints: (builder) => ({
     getDivisions: builder.query({
       query: () => "/divisions", // GET /posts

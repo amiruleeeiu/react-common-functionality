@@ -33,8 +33,8 @@ import {
   TileLayer,
   useMap,
 } from "react-leaflet";
-import { useGetMapDataQuery } from "../../services/apiSlice";
 import { convertToAbbreviation } from "../lib/convertToAbbreviation";
+import { useGetMapDataQuery } from "../services/apiSlice";
 
 const MotionFlex = motion(Flex);
 const MotionBox = motion(Box);
