@@ -28,8 +28,8 @@ export default function UserDialogForm({
     defaultValues: initialData,
   });
 
-  const [addUser] = useAddUserMutation();
-  const [editUser] = useUpdateUserMutation();
+  const [addUser, { isLoading: isAddLoading }] = useAddUserMutation();
+  const [editUser, { isLoading }] = useUpdateUserMutation();
 
   useEffect(() => {
     reset(initialData);
@@ -38,12 +38,30 @@ export default function UserDialogForm({
   const onSubmit = async (data: User) => {
     try {
       if (data.id) {
-        await editUser({
+        const updatedRes = await editUser({
           id: data.id,
           data: { name: data.name, email: data.email },
         }).unwrap();
+
+        if (updatedRes) {
+          toaster.create({
+            title: "Success",
+            description: "User updated successfully",
+            duration: 3000,
+            type: "success",
+          });
+        }
       } else {
-        await addUser(data).unwrap();
+        const res = await addUser(data).unwrap();
+
+        if (res) {
+          toaster.create({
+            title: "Success",
+            description: "User updated successfully",
+            duration: 3000,
+            type: "success",
+          });
+        }
       }
 
       onClose();
@@ -105,7 +123,14 @@ export default function UserDialogForm({
                   Cancel
                 </Button>
               </Dialog.ActionTrigger>
-              <Button type="submit" form="user-form" colorScheme="blue">
+              <Button
+                type="submit"
+                form="user-form"
+                colorScheme="blue"
+                loading={isAddLoading || isLoading}
+                disabled={isAddLoading || isLoading}
+                loadingText={initialData?.id ? "Updating..." : "Adding..."}
+              >
                 {initialData?.id ? "Update" : "Add"}
               </Button>
             </Dialog.Footer>

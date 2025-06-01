@@ -5,6 +5,7 @@ type FetcherFn<T> = (id: number) => {
   refetch: () => void;
   isLoading: boolean;
   isSuccess: boolean;
+  isFetching: boolean;
 };
 
 export function useOpenModal<T>(defaultData: T, fetcher: FetcherFn<T>) {
@@ -12,7 +13,9 @@ export function useOpenModal<T>(defaultData: T, fetcher: FetcherFn<T>) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [initialData, setInitialData] = useState<T>(defaultData);
 
-  const { data, refetch, isLoading, isSuccess } = fetcher(selectedId!);
+  const { data, refetch, isLoading, isFetching, isSuccess } = fetcher(
+    selectedId!
+  );
 
   const handleOpen = (id?: number) => {
     if (id !== undefined) {
@@ -39,7 +42,7 @@ export function useOpenModal<T>(defaultData: T, fetcher: FetcherFn<T>) {
     isOpen,
     setIsOpen,
     setSelectedId,
-    isLoading,
+    isLoading: isFetching || isLoading,
     isSuccess,
   };
 }

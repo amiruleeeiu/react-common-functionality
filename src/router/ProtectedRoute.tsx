@@ -1,5 +1,6 @@
 // src/auth/ProtectedRoute.tsx
 import { Navigate, Outlet } from "react-router-dom";
+import Loading from "../components/Loading";
 import { useAuth } from "../context/AuthProvider";
 
 interface ProtectedRouteProps {
@@ -8,13 +9,11 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ allowedRoles = [] }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, userRoles, token } = useAuth();
-
-  console.log(token);
+  const { isAuthenticated, isLoading, userRoles } = useAuth();
 
   if (isLoading) {
     // show loading only while checking auth
-    return <div className="text-center p-4">Loading...</div>;
+    return <Loading />;
   }
 
   if (!isAuthenticated) {

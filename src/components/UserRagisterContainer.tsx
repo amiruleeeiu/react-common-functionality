@@ -2,6 +2,8 @@
 import { Box, Button, Flex, Heading, Table } from "@chakra-ui/react";
 import { useOpenModal } from "../hooks/useOpenModal";
 import { useGetUserByIdQuery, useGetUsersQuery } from "../services/userApi";
+import DemoAuto from "./DemoAuto";
+import Loading from "./Loading";
 import UserFormModal from "./UserFormModal";
 
 // interface User {
@@ -18,7 +20,6 @@ const initialData = {
 export default function UserRagisterContainer() {
   const fetchUser = (id: number) =>
     useGetUserByIdQuery(id, {
-      refetchOnMountOrArgChange: true,
       skip: id === null,
     });
 
@@ -31,6 +32,8 @@ export default function UserRagisterContainer() {
     isLoading: isGetByIdLoading,
   } = useOpenModal(initialData, fetchUser);
 
+  console.log(isGetByIdLoading);
+
   const { data: users, isLoading, isFetching } = useGetUsersQuery();
 
   let content = null;
@@ -39,7 +42,9 @@ export default function UserRagisterContainer() {
     content = (
       <Table.Body>
         <Table.Row>
-          <Table.Cell colSpan={4}>Loading...</Table.Cell>
+          <Table.Cell colSpan={4}>
+            <Loading />
+          </Table.Cell>
         </Table.Row>
       </Table.Body>
     );
@@ -79,6 +84,7 @@ export default function UserRagisterContainer() {
   return (
     <>
       <Box maxW="6xl" mx="auto" px={6} py={8}>
+        <DemoAuto />
         {/* Header Section */}
         <Flex justify="space-between" align="center" mb={6}>
           <Heading size="lg">User</Heading>
@@ -108,6 +114,8 @@ export default function UserRagisterContainer() {
           </Table.Root>
         </Box>
       </Box>
+
+      {isGetByIdLoading && <Loading />}
 
       {isOpen && !isGetByIdLoading && (
         <UserFormModal

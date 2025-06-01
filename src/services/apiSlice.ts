@@ -31,6 +31,7 @@ export const apiSlice = createApi({
     baseUrl: "http://localhost:3000",
   }),
   tagTypes: ["users"],
+  refetchOnMountOrArgChange: true,
   endpoints: (builder) => ({
     getDivisions: builder.query({
       query: () => "/divisions", // GET /posts
